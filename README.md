@@ -11,6 +11,7 @@ $ cargo build --target wasm32-wasip1 --release
 
 func-e run -c config-grpc-call.yaml (If you have func-e tool)
 
+curl localhost:10000 -vvv --head
 -- 
 The other option is to run with the docker-compose (TODO)
 
