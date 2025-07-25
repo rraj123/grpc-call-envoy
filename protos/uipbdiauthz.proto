@@ -1,5 +1,4 @@
 syntax = "proto3";
-option go_package = "git.soma.salesforce.com/deepsea/auth-engine/pkg/authengine";
 package authengine;
 service UIPBDIAuthZProcessor {
   // RPC authz filter - Call.
