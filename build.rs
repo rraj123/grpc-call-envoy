@@ -1,5 +1,5 @@
 fn main() {
-    let proto_files = vec!["./protos/helloworld.proto"];
+    let proto_files = vec!["./protos/uipbdiauthz.proto"];
 
     protoc_rust::Codegen::new()
         .out_dir("./src")
