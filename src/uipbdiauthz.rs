@@ -718,8 +718,7 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x0cHeadersEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\x14\n\
     \x05value\x18\x02\x20\x01(\tR\x05value:\x028\x012]\n\x14UIPBDIAuthZProce\
     ssor\x12E\n\nprocessReq\x12\x19.authengine.FilterRequest\x1a\x1a.autheng\
-    ine.FilterResponse\"\0B<Z:git.soma.salesforce.com/deepsea/auth-engine/pk\
-    g/authengineb\x06proto3\
+    ine.FilterResponse\"\0b\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;

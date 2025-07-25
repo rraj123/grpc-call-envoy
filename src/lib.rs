@@ -214,6 +214,13 @@ impl AuthEngine {
 
     // Extract common gRPC call logic to reduce code duplication
     fn make_grpc_call(&self, cluster_name: &str, message: &[u8]) -> Result<u32, Status> {
+        info!("Making gRPC call to:");
+        info!("  Cluster: {}", cluster_name);
+        info!("  Service: authengine.UIPBDIAuthZProcessor");
+        info!("  Method: processReq");
+        info!("  Message size: {} bytes", message.len());
+        info!("  Timeout: 5 seconds");
+        
         self.dispatch_grpc_call(
             cluster_name,
             "authengine.UIPBDIAuthZProcessor",
@@ -348,10 +355,13 @@ impl Context for AuthEngine {
         #[cfg(feature = "memory-tracking")]
         memory_tracking::log_memory_change("gRPC Response Start", self.request_start_stats);
 
-        let Some(response_data) = self.get_grpc_call_response_body(0, response_size) else {
-            warn!("No response data received from auth service");
-            self.send_http_response(500, vec![], Some(b"Internal Server Error"));
-            return;
+        let response_data = match self.get_grpc_call_response_body(0, response_size) {
+            Some(data) => data,
+            None => {
+                warn!("No response data received from auth service");
+                self.send_http_response(500, vec![], Some(b"Internal Server Error"));
+                return;
+            }
         };
 
         info!(
@@ -359,11 +369,43 @@ impl Context for AuthEngine {
             response_data.len()
         );
 
+        // Add detailed debugging for response format
+        info!("Attempting to parse {} bytes as protobuf FilterResponse", response_data.len());
+        
+        // Check if response looks like HTTP (common misconfiguration)
+        if response_data.len() > 4 && response_data.starts_with(b"HTTP") {
+            warn!("ERROR: Received HTTP response instead of gRPC protobuf! This indicates the backend service is misconfigured.");
+            warn!("Expected: gRPC service responding with FilterResponse protobuf");
+            warn!("Actual: HTTP response (likely the service is not running or wrong endpoint)");
+            self.send_http_response(502, vec![], Some(b"Backend service misconfiguration - HTTP response received instead of gRPC"));
+            return;
+        }
+        
+        // Check for common non-protobuf patterns
+        if let Ok(text_response) = std::str::from_utf8(&response_data) {
+            if text_response.contains("HTTP/") || text_response.contains("GET ") || text_response.contains("POST ") {
+                warn!("ERROR: Backend returned HTTP log/text data instead of protobuf");
+                warn!("Response preview: {}", &text_response[..text_response.len().min(200)]);
+                self.send_http_response(502, vec![], Some(b"Backend service error - non-protobuf response"));
+                return;
+            }
+        }
+
         let reply = match FilterResponse::parse_from_bytes(&response_data) {
             Ok(reply) => reply,
             Err(e) => {
                 warn!("Failed to parse gRPC response: {:?}", e);
-                if let Ok(raw_str) = String::from_utf8(response_data) {
+                warn!("Response size: {} bytes", response_data.len());
+                
+                // Show hex dump of first few bytes for debugging
+                let preview_bytes = &response_data[..response_data.len().min(32)];
+                let hex_preview: String = preview_bytes.iter()
+                    .map(|b| format!("{:02x}", b))
+                    .collect::<Vec<String>>()
+                    .join(" ");
+                warn!("Response hex preview (first 32 bytes): {}", hex_preview);
+                
+                if let Ok(raw_str) = String::from_utf8(response_data.clone()) {
                     warn!("Raw response content: {}", raw_str);
                 }
                 self.send_http_response(500, vec![], Some(b"Internal Server Error"));
