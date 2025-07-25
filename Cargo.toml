@@ -12,6 +12,15 @@ log = "0.4.22"
 protobuf = "2.28.0"
 base64 = "0.21.0"
 
+# Memory tracking for leak detection (optional, for development)
+[dependencies.stats_alloc]
+version = "0.1.10"
+optional = true
+
+[features]
+default = []
+memory-tracking = ["stats_alloc"]
+
 [build-dependencies]
 protoc-rust = "2.0"
 
